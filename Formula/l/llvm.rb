@@ -505,16 +505,22 @@ class Llvm < Formula
     arches << arch
 
     arches.each do |target_arch|
-      target_triple = "#{target_arch}-apple-darwin#{kernel_version}"
-      (clang_config_file_dir/"#{target_triple}.cfg").atomic_write <<~CONFIG
-        --sysroot=#{MacOS::CLT::PKG_PATH}/SDKs/MacOSX#{macos_version}.sdk
-      CONFIG
+      # Clang accepts both `-darwin` and `-macosx` as macOS triples.
+      triples = [
+        "#{target_arch}-apple-darwin#{kernel_version}",
+        "#{target_arch}-apple-macosx#{macos_version}",
+      ]
+      triples.each do |target_triple|
+        (clang_config_file_dir/"#{target_triple}.cfg").atomic_write <<~CONFIG
+          --sysroot=#{MacOS::CLT::PKG_PATH}/SDKs/MacOSX#{macos_version}.sdk
+        CONFIG
+      end
     end
   end
 
   def post_install
     return unless OS.mac?
-    return if (clang_config_file_dir/"#{Hardware::CPU.arch}-apple-darwin#{OS.kernel_version.major}.cfg").exist?
+    return if (clang_config_file_dir/"#{Hardware::CPU.arch}-apple-macosx#{MacOS.version.major}.cfg").exist?
 
     write_config_files(MacOS.version.major, OS.kernel_version.major, Hardware::CPU.arch)
   end
